@@ -1,7 +1,7 @@
 from enum import Enum
 from datetime import datetime
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from typing import Optional, List
 import uuid
 
 
@@ -21,3 +21,18 @@ class EmailSend(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     error_message: Optional[str] = None
+
+
+class UploadResult(BaseModel):
+    row_number: int
+    status: SendStatus
+    email: Optional[EmailStr] = None
+    error_message: Optional[str] = None
+
+
+class UploadResponse(BaseModel):
+    batch_id: str
+    total_rows: int
+    successful_imports: int
+    failed_imports: int
+    results: List[UploadResult]

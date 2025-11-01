@@ -12,6 +12,9 @@ class EmailRepository:
     def save_pending(self, email_send: EmailSend) -> None:
         ...
 
+    def save_many_pending(self, email_sends: List[EmailSend]) -> None:
+        ...
+
     def mark_sent(self, send_id: str, batch_id: str) -> None:
         ...
 
@@ -35,6 +38,9 @@ class InMemoryEmailRepository(EmailRepository):
 
     def save_pending(self, email_send: EmailSend) -> None:
         self._db.append(email_send)
+
+    def save_many_pending(self, email_sends: List[EmailSend]) -> None:
+        self._db.extend(email_sends)
 
 
 # Global repository instance
