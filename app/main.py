@@ -8,7 +8,7 @@ from mangum import Mangum
 
 # Asumimos que estos módulos existen según el contexto proporcionado
 from app.models import EmailSend, SendStatus
-from app.repository import email_repository
+from app import dynamo_repository
 
 # --- Constantes ---
 MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
@@ -94,7 +94,7 @@ async def upload_campaign_csv(file: UploadFile = File(...)) -> dict:
 
             # 4. Persistencia y encolado (con TODOs para AWS)
             # TODO: Reemplazar el repositorio en memoria por una llamada a DynamoDB.
-            email_repository.save_pending(email_send)
+            dynamo_repository.save_pending(email_send)
 
             # TODO: Encolar un trabajo en SQS para el worker que procesará el envío.
             # Por ahora, solo lo contamos como "encolado".

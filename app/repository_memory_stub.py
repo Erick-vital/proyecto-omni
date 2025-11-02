@@ -9,6 +9,12 @@ db: List[EmailSend] = []
 
 
 class EmailRepository:
+    """
+    Este repositorio es un stub en memoria.
+    Se usó durante el desarrollo local y sirve como base para pruebas unitarias
+    sin depender de AWS (mock de DynamoDB).
+    NO se usa en Lambda ni en producción.
+    """
     def save_pending(self, email_send: EmailSend) -> None:
         ...
 
