@@ -92,12 +92,7 @@ async def upload_campaign_csv(file: UploadFile = File(...)) -> dict:
                 status=SendStatus.PENDING,
             )
 
-            # 4. Persistencia y encolado (con TODOs para AWS)
-            # TODO: Reemplazar el repositorio en memoria por una llamada a DynamoDB.
-            dynamo_repository.save_pending(email_send)
-
-            # TODO: Encolar un trabajo en SQS para el worker que procesará el envío.
-            # Por ahora, solo lo contamos como "encolado".
+            dynamo_repository.save_and_queue(email_send)
             enqueued_count += 1
 
     except Exception as e:

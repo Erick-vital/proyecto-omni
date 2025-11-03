@@ -7,6 +7,7 @@ import uuid
 
 class SendStatus(str, Enum):
     PENDING = "PENDING"
+    QUEUED = "QUEUED"
     SENT = "SENT"
     ERROR = "ERROR"
 

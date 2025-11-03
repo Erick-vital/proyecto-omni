@@ -43,6 +43,12 @@ resource "aws_iam_policy" "lambda_ingestor_policy" {
         "logs:PutLogEvents"
       ],
       "Resource": "arn:aws:logs:${var.aws_region}:*:*"
+    },
+    {
+      "Sid": "SQSSend",
+      "Effect": "Allow",
+      "Action": "sqs:SendMessage",
+      "Resource": "${aws_sqs_queue.email_send_queue.arn}"
     }
   ]
 }

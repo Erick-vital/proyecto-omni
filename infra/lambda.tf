@@ -12,6 +12,7 @@ resource "aws_lambda_function" "ingestor" {
   environment {
     variables = {
       EMAIL_SENDS_TABLE = aws_dynamodb_table.email_sends.name
+      EMAIL_SEND_QUEUE_URL = aws_sqs_queue.email_send_queue.id
     }
   }
 

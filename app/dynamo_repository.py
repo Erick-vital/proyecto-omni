@@ -4,96 +4,63 @@ import time
 from typing import Optional
 import boto3
 from botocore.exceptions import ClientError
+import json
 
 from app.models import EmailSend, SendStatus
 
-# Nombre de la tabla DynamoDB
+# Nombre de la tabla DynamoDB y cola SQS
 TABLE_NAME = os.environ.get("EMAIL_SENDS_TABLE", "EmailSends")
+QUEUE_URL = os.environ.get("EMAIL_SEND_QUEUE_URL", "") # URL de la cola SQS
 
 dynamodb = boto3.resource("dynamodb")
+sqs = boto3.client("sqs")
 table = dynamodb.Table(TABLE_NAME)
 
 def _now_iso() -> str:
     # timestamp ISO simple tipo 2025-11-01T21:00:00Z
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
-def save_pending(email_send: EmailSend) -> dict:
+def save_and_queue(email_send: EmailSend) -> dict:
     """
-    Inserta un registro con status=PENDING en DynamoDB.
-    Genera send_id único y rellena timestamps.
-    Devuelve el item guardado (útil para debug / logging).
+    Inserta un registro con status=QUEUED en DynamoDB y encola en SQS.
     """
-
     send_id = str(uuid.uuid4())
+    now = _now_iso()
 
     item = {
-        "batch_id": email_send.batch_id,        # PK
-        "send_id": send_id,                     # SK
+        "batch_id": email_send.batch_id,
+        "send_id": send_id,
         "email": email_send.email,
         "subject": email_send.subject,
         "content": email_send.content,
-        "status": SendStatus.PENDING.value 
-                 if hasattr(SendStatus, "PENDING") 
-                 else "PENDING",
-        "created_at": _now_iso(),
-        "updated_at": _now_iso(),
-        # Podemos incluir error_message vacío
+        "status": SendStatus.QUEUED.value,
+        "created_at": now,
+        "updated_at": now,
         "error_message": "",
     }
 
+    message_to_queue = {
+        "batch_id": item["batch_id"],
+        "send_id": item["send_id"],
+        "email": item["email"],
+        "subject": item["subject"],
+        "content": item["content"],
+    }
+
     try:
+        # 1. Guardar en DynamoDB
         table.put_item(Item=item)
+
+        # 2. Enviar a SQS
+        if not QUEUE_URL:
+            raise RuntimeError("La URL de la cola SQS no está configurada (EMAIL_SEND_QUEUE_URL).")
+            
+        sqs.send_message(
+            QueueUrl=QUEUE_URL,
+            MessageBody=json.dumps(message_to_queue)
+        )
     except ClientError as e:
         # Aquí podrías hacer logging o lanzar excepción HTTP
-        raise RuntimeError(f"Error guardando en DynamoDB: {e}")
+        raise RuntimeError(f"Error interactuando con AWS: {e}")
 
     return item
-
-def mark_sent(batch_id: str, send_id: str) -> None:
-    """
-    Ejemplo de actualización de estado a SENT (futuro worker).
-    """
-    try:
-        table.update_item(
-            Key={
-                "batch_id": batch_id,
-                "send_id": send_id,
-            },
-            UpdateExpression="SET #st = :st, updated_at = :now",
-            ExpressionAttributeNames={
-                "#st": "status",
-            },
-            ExpressionAttributeValues={
-                ":st": "SENT",
-                ":now": _now_iso(),
-            },
-        )
-    except ClientError as e:
-        raise RuntimeError(f"Error actualizando estado en DynamoDB: {e}")
-
-def mark_error(batch_id: str, send_id: str, message: str) -> None:
-    """
-    Ejemplo de actualizar a ERROR con mensaje.
-    """
-    try:
-        table.update_item(
-            Key={
-                "batch_id": batch_id,
-                "send_id": send_id,
-            },
-            UpdateExpression="""
-                SET #st = :st,
-                    error_message = :msg,
-                    updated_at = :now
-            """,
-            ExpressionAttributeNames={
-                "#st": "status",
-            },
-            ExpressionAttributeValues={
-                ":st": "ERROR",
-                ":msg": message,
-                ":now": _now_iso(),
-            },
-        )
-    except ClientError as e:
-        raise RuntimeError(f"Error marcando error en DynamoDB: {e}")
