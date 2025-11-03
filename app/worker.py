@@ -18,6 +18,9 @@ def handler(event, context):
             message = json.loads(record['body'])
             print(f"Processing message: {message}")
 
+            if message.get("content") == "TRIGGER_DLQ":
+                raise ValueError("Forced failure for DLQ test")
+
             # 1. "Enviar" el email (simulación)
             # En un caso real, aquí iría la lógica de envío con SES
             print(f"Simulating email send to {message['email']} with subject '{message['subject']}'")

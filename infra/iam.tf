@@ -49,6 +49,18 @@ resource "aws_iam_policy" "lambda_ingestor_policy" {
       "Effect": "Allow",
       "Action": "sqs:SendMessage",
       "Resource": "${aws_sqs_queue.email_send_queue.arn}"
+    },
+    {
+      "Sid": "DynamoRead",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:Query",
+        "dynamodb:Scan"
+      ],
+      "Resource": [
+        "${aws_dynamodb_table.email_sends.arn}",
+        "${aws_dynamodb_table.email_sends.arn}/index/*"
+      ]
     }
   ]
 }
